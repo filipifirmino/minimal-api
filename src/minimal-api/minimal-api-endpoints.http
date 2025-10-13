@@ -1,0 +1,128 @@
+### Minimal API - Endpoints Atualizados
+### Base URL: http://localhost:5000
+
+################################################################################
+### Authentication Endpoints
+################################################################################
+
+### Login
+POST http://localhost:5000/api/auth/login
+Content-Type: application/json
+
+{
+  "email": "joao@example.com",
+  "password": "senha123"
+}
+
+################################################################################
+### User Endpoints
+################################################################################
+
+### Create User
+POST http://localhost:5000/api/users
+Content-Type: application/json
+
+{
+  "name": "João Silva",
+  "email": "joao@example.com",
+  "password": "senha123"
+}
+
+###
+
+### Get All Users
+GET http://localhost:5000/api/users
+
+###
+
+### Get User by ID
+GET http://localhost:5000/api/users/00000000-0000-0000-0000-000000000000
+
+###
+
+### Update User
+PUT http://localhost:5000/api/users/00000000-0000-0000-0000-000000000000
+Content-Type: application/json
+
+{
+  "id": "00000000-0000-0000-0000-000000000000",
+  "name": "João Silva Updated",
+  "email": "joao.updated@example.com",
+  "status": 0
+}
+
+###
+
+### Delete User
+DELETE http://localhost:5000/api/users/00000000-0000-0000-0000-000000000000
+
+################################################################################
+### Vehicle Endpoints
+################################################################################
+
+### Create Vehicle
+POST http://localhost:5000/api/vehicles
+Content-Type: application/json
+
+{
+  "brand": "Toyota",
+  "model": "Corolla",
+  "year": "2023",
+  "color": "Prata",
+  "licensePlate": "ABC-1234"
+}
+
+###
+
+### Get All Vehicles
+GET http://localhost:5000/api/vehicles
+
+###
+
+### Get Vehicle by ID
+GET http://localhost:5000/api/vehicles/00000000-0000-0000-0000-000000000000
+
+###
+
+### Delete Vehicle
+DELETE http://localhost:5000/api/vehicles/00000000-0000-0000-0000-000000000000
+
+################################################################################
+### Example Flow: Create User and Login
+################################################################################
+
+### 1. Create a new user
+POST http://localhost:5000/api/users
+Content-Type: application/json
+
+{
+  "name": "Maria Santos",
+  "email": "maria@example.com",
+  "password": "maria123"
+}
+
+### 2. Login with the created user
+POST http://localhost:5000/api/auth/login
+Content-Type: application/json
+
+{
+  "email": "maria@example.com",
+  "password": "maria123"
+}
+
+################################################################################
+### Status Enum Values
+################################################################################
+# 0 = Active
+# 1 = Inactive
+
+################################################################################
+### Notes
+################################################################################
+# - Todas as rotas começam com /api/
+# - IDs devem ser GUIDs válidos
+# - O status Active é atribuído automaticamente na criação
+# - Senhas são automaticamente hasheadas com SHA256
+# - Senhas nunca são retornadas nas respostas
+
+
