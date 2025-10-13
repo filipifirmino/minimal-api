@@ -1,0 +1,19 @@
+@minimal_api_HostAddress = http://localhost:5189
+
+GET {{minimal_api_HostAddress}}/GetAll
+Accept: application/json
+
+GET {{minimal_api_HostAddress}}/Vehicle
+Accept: application/json
+
+POST {{minimal_api_HostAddress}}/user-register
+Content-Type: application/json
+
+{
+  "name": "João Silva",
+  "email": "joao@example.com",
+  "password": "senha123",
+  "status": 0
+}
+
+###
