@@ -19,7 +19,6 @@ public class Vehicle
         Id = Guid.NewGuid();
     }
     
-    // Construtor sem parâmetros para EF Core
     protected Vehicle()
     {
     }

@@ -1,3 +1,4 @@
+using FluentValidation;
 using Microsoft.AspNetCore.Mvc;
 using minimal_api.Dominio.DTOs;
 using minimal_api.Dominio.Mappers;
@@ -12,13 +13,32 @@ public static class VehicleEndpoints
     {
         var group = app.MapGroup("/api/vehicles").WithTags("Vehicles");
 
-        group.MapGet("/", async (IRepositoryBase<VehicleEntity> vehicleRepository) =>
+        group.MapGet("/", async (IRepositoryBase<VehicleEntity> vehicleRepository, int? pageNumber, int? pageSize) =>
         {
             try
             {
-                var vehicles = await vehicleRepository.GetAllAsync();
-                var vehiclesDto = vehicles.Select(v => v.ToResponseDto());
-                return Results.Ok(vehiclesDto);
+                if (!pageNumber.HasValue && !pageSize.HasValue)
+                {
+                    var vehicles = await vehicleRepository.GetAllAsync();
+                    var vehiclesDto = vehicles.Select(v => v.ToResponseDto());
+                    return Results.Ok(vehiclesDto);
+                }
+
+                var pagination = new PaginationParameters
+                {
+                    PageNumber = pageNumber ?? 1,
+                    PageSize = pageSize ?? 10
+                };
+
+                var pagedVehicles = await vehicleRepository.GetPagedAsync(pagination);
+                var pagedResponse = new PagedResult<VehicleResponseDto>(
+                    pagedVehicles.Items.Select(v => v.ToResponseDto()),
+                    pagedVehicles.TotalCount,
+                    pagedVehicles.PageNumber,
+                    pagedVehicles.PageSize
+                );
+
+                return Results.Ok(pagedResponse);
             }
             catch (Exception ex)
             {
@@ -27,9 +47,10 @@ public static class VehicleEndpoints
         })
         .WithName("GetAllVehicles")
         .WithSummary("Listar todos os veículos")
-        .WithDescription("Retorna uma lista com todos os veículos cadastrados no sistema")
+        .WithDescription("Retorna uma lista com todos os veículos cadastrados no sistema. Suporta paginação com parâmetros pageNumber e pageSize")
         .WithOpenApi()
         .Produces<IEnumerable<VehicleResponseDto>>(StatusCodes.Status200OK)
+        .Produces<PagedResult<VehicleResponseDto>>(StatusCodes.Status200OK)
         .Produces<object>(StatusCodes.Status400BadRequest);
 
         group.MapGet("/{id:guid}", async (Guid id, IRepositoryBase<VehicleEntity> vehicleRepository) =>
@@ -55,8 +76,20 @@ public static class VehicleEndpoints
         .Produces<object>(StatusCodes.Status400BadRequest)
         .Produces<object>(StatusCodes.Status404NotFound);
 
-        group.MapPost("/", async ([FromBody] CreateVehicleRequestDto request, IRepositoryBase<VehicleEntity> vehicleRepository) =>
+        group.MapPost("/", async (
+            [FromBody] CreateVehicleRequestDto request, 
+            IRepositoryBase<VehicleEntity> vehicleRepository,
+            IValidator<CreateVehicleRequestDto> validator) =>
         {
+            var validationResult = await validator.ValidateAsync(request);
+            if (!validationResult.IsValid)
+            {
+                var errors = validationResult.Errors
+                    .GroupBy(e => e.PropertyName)
+                    .ToDictionary(g => g.Key, g => g.Select(e => e.ErrorMessage).ToArray());
+                return Results.BadRequest(new { errors });
+            }
+
             try
             {
                 var vehicle = request.ToDomain();
