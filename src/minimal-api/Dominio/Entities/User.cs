@@ -19,7 +19,6 @@ public class User
         Id = Guid.NewGuid();
     }
     
-    // Construtor sem parâmetros para EF Core
     protected User()
     {
     }

@@ -1,3 +1,4 @@
+using FluentValidation;
 using Microsoft.AspNetCore.Mvc;
 using minimal_api.Dominio.DTOs;
 using minimal_api.Dominio.Mappers;
@@ -12,8 +13,20 @@ public static class UserEndpoints
     {
         var group = app.MapGroup("/api/users").WithTags("Users");
 
-        group.MapPost("/", async ([FromBody] CreateUserRequestDto request, ICreateUserProcess createUserProcess) =>
+        group.MapPost("/", async (
+            [FromBody] CreateUserRequestDto request, 
+            ICreateUserProcess createUserProcess,
+            IValidator<CreateUserRequestDto> validator) =>
         {
+            var validationResult = await validator.ValidateAsync(request);
+            if (!validationResult.IsValid)
+            {
+                var errors = validationResult.Errors
+                    .GroupBy(e => e.PropertyName)
+                    .ToDictionary(g => g.Key, g => g.Select(e => e.ErrorMessage).ToArray());
+                return Results.BadRequest(new { errors });
+            }
+
             try
             {
                 var result = await createUserProcess.HandleAsync(request);
@@ -31,8 +44,21 @@ public static class UserEndpoints
         .Produces<UserResponseDto>(StatusCodes.Status201Created)
         .Produces<object>(StatusCodes.Status400BadRequest);
 
-        group.MapPut("/{id:guid}", async (Guid id, [FromBody] UpdateUserRequestDto request, IUserRepository userRepository) =>
+        group.MapPut("/{id:guid}", async (
+            Guid id, 
+            [FromBody] UpdateUserRequestDto request, 
+            IUserRepository userRepository,
+            IValidator<UpdateUserRequestDto> validator) =>
         {
+            var validationResult = await validator.ValidateAsync(request);
+            if (!validationResult.IsValid)
+            {
+                var errors = validationResult.Errors
+                    .GroupBy(e => e.PropertyName)
+                    .ToDictionary(g => g.Key, g => g.Select(e => e.ErrorMessage).ToArray());
+                return Results.BadRequest(new { errors });
+            }
+
             try
             {
                 if (id != request.Id)
@@ -107,13 +133,32 @@ public static class UserEndpoints
         .Produces<object>(StatusCodes.Status400BadRequest)
         .Produces<object>(StatusCodes.Status404NotFound);
 
-        group.MapGet("/", async (IUserRepository userRepository) =>
+        group.MapGet("/", async (IUserRepository userRepository, int? pageNumber, int? pageSize) =>
         {
             try
             {
-                var users = await userRepository.GetAllAsync();
-                var usersDto = users.Select(u => u.ToResponseDto());
-                return Results.Ok(usersDto);
+                if (!pageNumber.HasValue && !pageSize.HasValue)
+                {
+                    var users = await userRepository.GetAllAsync();
+                    var usersDto = users.Select(u => u.ToResponseDto());
+                    return Results.Ok(usersDto);
+                }
+
+                var pagination = new PaginationParameters
+                {
+                    PageNumber = pageNumber ?? 1,
+                    PageSize = pageSize ?? 10
+                };
+
+                var pagedUsers = await userRepository.GetPagedAsync(pagination);
+                var pagedResponse = new PagedResult<UserResponseDto>(
+                    pagedUsers.Items.Select(u => u.ToResponseDto()),
+                    pagedUsers.TotalCount,
+                    pagedUsers.PageNumber,
+                    pagedUsers.PageSize
+                );
+
+                return Results.Ok(pagedResponse);
             }
             catch (Exception ex)
             {
@@ -122,9 +167,10 @@ public static class UserEndpoints
         })
         .WithName("GetAllUsers")
         .WithSummary("Listar todos os usuários")
-        .WithDescription("Retorna uma lista com todos os usuários cadastrados no sistema")
+        .WithDescription("Retorna uma lista com todos os usuários cadastrados no sistema. Suporta paginação com parâmetros pageNumber e pageSize")
         .WithOpenApi()
         .Produces<IEnumerable<UserResponseDto>>(StatusCodes.Status200OK)
+        .Produces<PagedResult<UserResponseDto>>(StatusCodes.Status200OK)
         .Produces<object>(StatusCodes.Status400BadRequest);
     }
 }

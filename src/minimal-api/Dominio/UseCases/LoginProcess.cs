@@ -23,8 +23,6 @@ public class LoginProcess(
         if (!isValidPassword)
             return null;
             
-        // Por enquanto retornando um token simples
-        // Em produção, implementar JWT adequadamente
         var token = Convert.ToBase64String(System.Text.Encoding.UTF8.GetBytes($"{user.Email}:{DateTime.UtcNow}"));
         
         return new LoginResponseDto(token, user.ToResponseDto());

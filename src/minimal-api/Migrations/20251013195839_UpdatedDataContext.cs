@@ -1,13 +1,13 @@
-﻿using Microsoft.EntityFrameworkCore.Migrations;
+using Microsoft.EntityFrameworkCore.Migrations;
 
 #nullable disable
 
 namespace minimal_api.Migrations
 {
-    /// <inheritdoc />
+
     public partial class UpdatedDataContext : Migration
     {
-        /// <inheritdoc />
+
         protected override void Up(MigrationBuilder migrationBuilder)
         {
             migrationBuilder.DropPrimaryKey(
@@ -62,7 +62,7 @@ namespace minimal_api.Migrations
                 unique: true);
         }
 
-        /// <inheritdoc />
+
         protected override void Down(MigrationBuilder migrationBuilder)
         {
             migrationBuilder.DropPrimaryKey(

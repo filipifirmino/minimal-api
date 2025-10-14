@@ -1,3 +1,4 @@
+using FluentValidation;
 using Microsoft.AspNetCore.Mvc;
 using minimal_api.Dominio.DTOs;
 using minimal_api.Dominio.UseCases;
@@ -10,8 +11,23 @@ public static class AuthEndpoints
     {
         var group = app.MapGroup("/api/auth").WithTags("Authentication");
 
-        group.MapPost("/login", async ([FromBody] LoginRequestDto request, ILoginProcess loginProcess) =>
+        group.MapPost("/login", async (
+            [FromBody] LoginRequestDto request, 
+            ILoginProcess loginProcess,
+            IValidator<LoginRequestDto> validator) =>
         {
+            var validationResult = await validator.ValidateAsync(request);
+            if (!validationResult.IsValid)
+            {
+                var errors = validationResult.Errors
+                    .GroupBy(e => e.PropertyName)
+                    .ToDictionary(
+                        g => g.Key,
+                        g => g.Select(e => e.ErrorMessage).ToArray()
+                    );
+                return Results.BadRequest(new { errors });
+            }
+
             try
             {
                 var result = await loginProcess.HandleAsync(request);

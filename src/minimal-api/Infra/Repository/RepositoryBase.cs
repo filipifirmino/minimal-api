@@ -1,4 +1,5 @@
 ﻿using Microsoft.EntityFrameworkCore;
+using minimal_api.Dominio.DTOs;
 using minimal_api.Infra.Context;
 
 namespace minimal_api.Infra.Repository;
@@ -10,6 +11,18 @@ public class RepositoryBase<T>(DataContext context) : IRepositoryBase<T>
 
     public virtual async Task<IEnumerable<T>> GetAllAsync()
         => await _context.Set<T>().ToListAsync();
+
+    public virtual async Task<PagedResult<T>> GetPagedAsync(PaginationParameters paginationParameters)
+    {
+        var totalCount = await _context.Set<T>().CountAsync();
+        
+        var items = await _context.Set<T>()
+            .Skip((paginationParameters.PageNumber - 1) * paginationParameters.PageSize)
+            .Take(paginationParameters.PageSize)
+            .ToListAsync();
+
+        return new PagedResult<T>(items, totalCount, paginationParameters.PageNumber, paginationParameters.PageSize);
+    }
 
     public virtual async Task<T?> GetByIdAsync(Guid id)
         => await _context.Set<T>().FindAsync(id);

@@ -1,32 +1,31 @@
+using FluentValidation;
 using Microsoft.EntityFrameworkCore;
 using Microsoft.OpenApi.Models;
 using minimal_api.Dominio.Services;
 using minimal_api.Dominio.UseCases;
+using minimal_api.Dominio.Validators;
 using minimal_api.Endpoints;
 using minimal_api.Infra.Context;
 using minimal_api.Infra.Repository;
 
 var builder = WebApplication.CreateBuilder(args);
 
-// Configuração do DbContext
 builder.Services.AddDbContext<DataContext>(options =>
 {
     var connectionString = builder.Configuration.GetConnectionString("DefaultConnection");
     options.UseSqlServer(connectionString);
 });
 
-// Registro dos Repositories
 builder.Services.AddScoped<IUserRepository, UserRepository>();
 builder.Services.AddScoped(typeof(IRepositoryBase<>), typeof(RepositoryBase<>));
 
-// Registro dos Services
 builder.Services.AddScoped<IPasswordHasher, PasswordHasher>();
 
-// Registro dos UseCases
 builder.Services.AddScoped<ICreateUserProcess, CreateUserProcess>();
 builder.Services.AddScoped<ILoginProcess, LoginProcess>();
 
-// Configuração do Swagger
+builder.Services.AddValidatorsFromAssemblyContaining<CreateUserRequestValidator>();
+
 builder.Services.AddEndpointsApiExplorer();
 builder.Services.AddSwaggerGen(options =>
 {
@@ -48,7 +47,6 @@ builder.Services.AddSwaggerGen(options =>
         }
     });
 
-    // Configuração para autenticação Bearer/JWT
     options.AddSecurityDefinition("Bearer", new OpenApiSecurityScheme
     {
         Name = "Authorization",
@@ -77,35 +75,26 @@ Exemplo: 'Bearer eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9...'",
             Array.Empty<string>()
         }
     });
-
-    // Ativa comentários XML (opcional - necessário criar o arquivo XML)
-    // var xmlFilename = $"{Assembly.GetExecutingAssembly().GetName().Name}.xml";
-    // options.IncludeXmlComments(Path.Combine(AppContext.BaseDirectory, xmlFilename));
 });
 
 var app = builder.Build();
 
-// Configure o HTTP request pipeline
 if (app.Environment.IsDevelopment())
 {
-    // Habilita o Swagger
     app.UseSwagger();
     
-    // Habilita o Swagger UI
     app.UseSwaggerUI(options =>
     {
         options.SwaggerEndpoint("/swagger/v1/swagger.json", "Minimal API v1");
-        options.RoutePrefix = "swagger"; // Acesso via: /swagger
+        options.RoutePrefix = "swagger";
         options.DocumentTitle = "Minimal API - Documentação";
         
-        // Configurações de UI
         options.DisplayRequestDuration();
         options.EnableDeepLinking();
         options.EnableFilter();
         options.ShowExtensions();
         options.EnableValidator();
         
-        // Tema e customizações
         options.DefaultModelsExpandDepth(2);
         options.DefaultModelExpandDepth(2);
         options.DocExpansion(Swashbuckle.AspNetCore.SwaggerUI.DocExpansion.List);
@@ -114,7 +103,6 @@ if (app.Environment.IsDevelopment())
 
 app.UseHttpsRedirection();
 
-// Mapear endpoints
 app.MapVehicleEndpoints();
 app.MapAuthEndpoints();
 app.MapUserEndpoints();
