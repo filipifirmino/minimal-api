@@ -1,0 +1,82 @@
+name: CI/CD para VPS (.NET)
+
+on:
+  push:
+    branches: [ main, develop ]
+  # Deploy só dispara com tag git tag --prd v1.0.0
+  create:
+    tags:
+      - '*'
+
+jobs:
+  test-and-build:
+    runs-on: ubuntu-latest
+    # Roda sempre, independente de tag
+    if: always()
+
+    steps:
+    - name: Checkout código
+      uses: actions/checkout@v4
+      with:
+        fetch-depth: 0  # Para git describe se precisar
+
+    - name: Setup .NET 8
+      uses: actions/setup-dotnet@v4
+      with:
+        dotnet-version: '8.0.x'
+
+    - name: Restore dependências
+      run: dotnet restore
+
+    - name: Rodar testes unitários
+      run: dotnet test --no-restore --configuration Release --logger "console;verbosity=detailed"
+
+    - name: Build Release (validação)
+      run: dotnet build --no-restore --configuration Release
+
+    - name: Análise de segurança (opcional)
+      uses: microsoft/setup-msbuild@v2  # Ou SonarCloud se tiver
+
+  deploy-vps:
+    needs: test-and-build  # Só roda se testes/build OK
+    runs-on: ubuntu-latest
+    # Só com tag que termina em --prd (ex: v1.0.0--prd)
+    if: |
+      github.event_name == 'create' &&
+      startsWith(github.ref, 'refs/tags/') &&
+      endsWith(github.ref_name, '--prd')
+
+    steps:
+    - name: Checkout código
+      uses: actions/checkout@v4
+
+    - name: Setup .NET 8
+      uses: actions/setup-dotnet@v4
+      with:
+        dotnet-version: '8.0.x'
+
+    - name: Restore dependências
+      run: dotnet restore
+
+    - name: Build Release
+      run: dotnet build --no-restore --configuration Release
+
+    - name: Publicar app
+      run: dotnet publish SuaSolucao/SuaAplicacao.csproj --configuration Release --runtime linux-x64 --self-contained false -o ./publish
+
+    - name: Configurar SSH
+      uses: webfactory/ssh-agent@v0.9.0
+      with:
+        ssh-private-key: ${{ secrets.VPS_SSH_KEY }}
+
+    - name: Deploy para VPS
+      run: |
+        # Copia arquivos (rsync limpa arquivos antigos)
+        rsync -avz --delete -e "ssh -o StrictHostKeyChecking=no" ./publish/ ${{ secrets.VPS_USERNAME }}@${{ secrets.VPS_HOST }}:${{ secrets.VPS_APP_PATH }}/
+        
+        # Restart serviço e valida
+        ssh -o StrictHostKeyChecking=no ${{ secrets.VPS_USERNAME }}@${{ secrets.VPS_HOST }} "
+          sudo systemctl restart sua-app &&
+          sudo systemctl status sua-app --no-pager -l &&
+          curl -f http://localhost:5000/health || echo 'Health check falhou'
+        "
