@@ -1,6 +1,6 @@
 ﻿using minimal_api.Dominio.DTOs;
 
-namespace minimal_api.Infra.Repository;
+namespace minimal_api.Infra.Repository.Interface;
 
 public interface IRepositoryBase<T> where T : class
 {

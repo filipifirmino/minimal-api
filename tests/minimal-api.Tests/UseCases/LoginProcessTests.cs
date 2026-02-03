@@ -5,6 +5,7 @@ using minimal_api.Dominio.Services;
 using minimal_api.Dominio.UseCases;
 using minimal_api.Infra.Entities;
 using minimal_api.Infra.Repository;
+using minimal_api.Infra.Repository.Interface;
 using Moq;
 
 namespace minimal_api.Tests.UseCases;
